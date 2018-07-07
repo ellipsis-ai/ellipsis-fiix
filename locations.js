@@ -16,7 +16,7 @@ module.exports = ellipsis => {
 
   function fetchLocations(site) {
     return new Promise((resolve, reject) => {
-      const locationFilter = { "ql": "intCategoryID = ?", "parameters": [ellipsis.env.FIIX_LOCATION_CATEGORY_ID] };
+      const locationFilter = { "ql": "intCategoryID = ?", "parameters": [parseInt(ellipsis.env.FIIX_LOCATION_CATEGORY_ID)] };
       const filters = [locationFilter];
       if (site) {
         filters.push({ "ql": "intSiteID = ?", "parameters": [parseInt(site.id)]});
