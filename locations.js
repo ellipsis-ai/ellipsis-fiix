@@ -1,7 +1,7 @@
 "use strict";
 
 module.exports = ellipsis => {
-  const client = require('sdk')(ellipsis);
+  const client = require('./sdk')(ellipsis);
 
   return {
     fetchSites: fetchSites,

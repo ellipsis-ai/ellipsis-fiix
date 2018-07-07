@@ -3,7 +3,7 @@
 const fs = require('fs');
 
 module.exports = ellipsis => {
-  const client = require('sdk')(ellipsis);
+  const client = require('./sdk')(ellipsis);
 
   return {
     createLink: createLink,

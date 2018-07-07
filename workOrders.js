@@ -1,7 +1,7 @@
 "use strict";
 
 module.exports = ellipsis => {
-  const client = require('sdk')(ellipsis);
+  const client = require('./sdk')(ellipsis);
   const maintenanceTypeName = ellipsis.env.FIIX_SAFETY_TYPE_NAME;
   const guestUserId = parseInt(ellipsis.env.FIIX_GUEST_USER_ID);
 
