@@ -1,0 +1,25 @@
+{
+  "name": "ellipsis-fiix",
+  "version": "0.0.1",
+  "description": "Support for accessing the Fiix API from Ellipsis.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ellipsis-ai/ellipsis-fiix.git"
+  },
+  "keywords": [
+    "ellipsis"
+  ],
+  "author": "Ellipsis Co. <a@ellipsis.ai> (http://ellipsis.ai)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/ellipsis-ai/ellipsis-fiix/issues"
+  },
+  "homepage": "https://github.com/ellipsis-ai/ellipsis-fiix#readme",
+  "dependencies": {
+    "fiix-cmms-client": "^2.6.3"
+  }
+}
