@@ -24,9 +24,9 @@ module.exports = ellipsis => {
     }
   }
 
-  function createWorkOrder(description, location) {
+  function createWorkOrder(description, location, suggestedCompletionDate) {
     return new Promise((resolve, reject) => {
-      createBareWorkOrder(description, location).then(workOrderId => {
+      createBareWorkOrder(description, location, suggestedCompletionDate).then(workOrderId => {
         createWorkOrderLocation(workOrderId, location).then(() => {
           setRequestorFor(workOrderId).then(() => {
             resolve(workOrderId);
@@ -123,7 +123,7 @@ module.exports = ellipsis => {
     });
   }
 
-  function createBareWorkOrder(description, location) {
+  function createBareWorkOrder(description, location, suggestedCompletionDate) {
     return new Promise((resolve, reject) => {
       maintenanceTypeId().then(maintenanceTypeId => {
         requestedStatusId().then(requestedStatusId => {
@@ -140,7 +140,8 @@ module.exports = ellipsis => {
                 "strDescription" : description,
                 "strNameUserGuest" : reporterName,
                 "strEmailUserGuest" : reporterEmail,
-                "strPhoneUserGuest" : reporterPhone
+                "strPhoneUserGuest" : reporterPhone,
+                "dtmSuggestedCompletionDate": suggestedCompletionDate
               },
               "callback": function(ret) {
                 if (!ret.error) {
