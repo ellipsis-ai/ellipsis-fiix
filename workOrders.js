@@ -2,7 +2,6 @@
 
 module.exports = ellipsis => {
   const client = require('./sdk')(ellipsis);
-  const maintenanceTypeName = ellipsis.env.FIIX_SAFETY_TYPE_NAME;
   const guestUserId = parseInt(ellipsis.env.FIIX_GUEST_USER_ID);
 
   const slackProfile = ellipsis.userInfo.messageInfo.details.profile;
@@ -12,7 +11,7 @@ module.exports = ellipsis => {
 
   return {
     create: createWorkOrder,
-    maintenanceTypeId: maintenanceTypeId,
+    maintenanceTypeIdFor: maintenanceTypeIdFor,
     findWorkOrder: findWorkOrder
   };
 
@@ -24,9 +23,9 @@ module.exports = ellipsis => {
     }
   }
 
-  function createWorkOrder(description, location, suggestedCompletionDate) {
+  function createWorkOrder(options) {
     return new Promise((resolve, reject) => {
-      createBareWorkOrder(description, location, suggestedCompletionDate).then(workOrderId => {
+      createBareWorkOrder(options).then(workOrderId => {
         createWorkOrderLocation(workOrderId, location).then(() => {
           setRequestorFor(workOrderId).then(() => {
             resolve(workOrderId);
@@ -36,7 +35,7 @@ module.exports = ellipsis => {
     });
   }
 
-  function maintenanceTypeId() {
+  function maintenanceTypeIdFor(maintenanceTypeName) {
     return new Promise((resolve, reject) => {
       client.find({
         "className": "MaintenanceType",
@@ -123,11 +122,12 @@ module.exports = ellipsis => {
     });
   }
 
-  function createBareWorkOrder(description, location, suggestedCompletionDate) {
+  function createBareWorkOrder(options) {
     return new Promise((resolve, reject) => {
-      maintenanceTypeId().then(maintenanceTypeId => {
+      maintenanceTypeIdFor(options.maintenanceTypeName).then(maintenanceTypeId => {
         requestedStatusId().then(requestedStatusId => {
           lowPriorityId().then(lowPriorityId => {
+            const locationId = options.location ? parseInt(options.location.siteId) : undefined;
             client.add({
               "className" : "WorkOrder",
               "fields": "id",
@@ -136,12 +136,12 @@ module.exports = ellipsis => {
                 "intMaintenanceTypeID" : maintenanceTypeId,
                 "intPriorityID": lowPriorityId,
                 "intWorkOrderStatusID" : requestedStatusId,
-                "intSiteID": parseInt(location.siteId),
-                "strDescription" : description,
+                "intSiteID": locationId,
+                "strDescription" : options.description,
                 "strNameUserGuest" : reporterName,
                 "strEmailUserGuest" : reporterEmail,
                 "strPhoneUserGuest" : reporterPhone,
-                "dtmSuggestedCompletionDate": suggestedCompletionDate
+                "dtmSuggestedCompletionDate": options.suggestedCompletionDate
               },
               "callback": function(ret) {
                 if (!ret.error) {
