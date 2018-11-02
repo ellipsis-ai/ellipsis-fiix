@@ -26,7 +26,7 @@ module.exports = ellipsis => {
   function createWorkOrder(options) {
     return new Promise((resolve, reject) => {
       createBareWorkOrder(options).then(workOrderId => {
-        createWorkOrderLocation(workOrderId, location).then(() => {
+        createWorkOrderLocation(workOrderId, options.location).then(() => {
           setRequestorFor(workOrderId).then(() => {
             resolve(workOrderId);
           });
