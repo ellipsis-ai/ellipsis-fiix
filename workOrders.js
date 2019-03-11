@@ -86,12 +86,12 @@ module.exports = ellipsis => {
     });
   }
 
-  function lowPriorityId() {
+  function priorityIdFor(label) {
     return new Promise((resolve, reject) => {
       client.find({
         "className": "Priority",
         "fields": "id",
-        "filters": [{ "ql": "strName = ?", "parameters": ["Low"] }],
+        "filters": [{ "ql": "strName = ?", "parameters": [label] }],
         "maxObjects": 1,
         "callback": function(ret) {
           if (!ret.error) {
@@ -101,6 +101,10 @@ module.exports = ellipsis => {
         }
       });
     });
+  }
+
+  function lowPriorityId() {
+    return priorityIdFor("Low");
   }
 
   function setRequestorFor(workOrderId) {
@@ -126,7 +130,7 @@ module.exports = ellipsis => {
     return new Promise((resolve, reject) => {
       maintenanceTypeIdFor(options.maintenanceTypeName).then(maintenanceTypeId => {
         requestedStatusId().then(requestedStatusId => {
-          lowPriorityId().then(lowPriorityId => {
+          priorityIdFor(options.priority || "Low").then(lowPriorityId => {
             const locationId = options.location ? parseInt(options.location.siteId) : undefined;
             client.add({
               "className" : "WorkOrder",
