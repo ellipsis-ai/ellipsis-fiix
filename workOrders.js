@@ -12,7 +12,8 @@ module.exports = ellipsis => {
   return {
     create: createWorkOrder,
     maintenanceTypeIdFor: maintenanceTypeIdFor,
-    findWorkOrder: findWorkOrder
+    findWorkOrder: findWorkOrder,
+    listWorkOrders: listWorkOrders
   };
 
   function reporterDetail(detail, fallback) {
@@ -191,6 +192,22 @@ module.exports = ellipsis => {
           }
         }
       });
+    });
+  }
+
+  function listWorkOrders() {
+    return new Promise((resolve, reject) => {
+      client.find({
+        className: "WorkOrder",
+        fields: "id, intWorkOrderStatusID, strAssets, intSiteId, dtmDateCreated, strAssetIds, strDescription, strCode, intMaintenanceTypeId, dv_intPriorityID, dv_intSiteID, dv_intWorkOrderStatusID, dv_intMaintenanceTypeID",
+        "callback": function(ret) {
+          if (!ret.error) {
+            resolve(ret.objects);
+          } else {
+            reject(ret.error);
+          }
+        }
+      })
     });
   }
 
