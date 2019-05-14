@@ -13,7 +13,7 @@ module.exports = ellipsis => {
     create: createWorkOrder,
     maintenanceTypeIdFor: maintenanceTypeIdFor,
     findWorkOrder: findWorkOrder,
-    listWorkOrders: listWorkOrders
+    listOpenWorkOrders: listOpenWorkOrders
   };
 
   function reporterDetail(detail, fallback) {
@@ -195,20 +195,70 @@ module.exports = ellipsis => {
     });
   }
 
-  function listWorkOrders() {
+  function openWorkOrderStatusIDs() {
     return new Promise((resolve, reject) => {
-      client.find({
-        className: "WorkOrder",
-        fields: "id, intWorkOrderStatusID, strAssets, intSiteId, dtmDateCreated, strAssetIds, strDescription, strCode, intMaintenanceTypeId, dv_intPriorityID, dv_intSiteID, dv_intWorkOrderStatusID, dv_intMaintenanceTypeID",
+      return client.find({
+        "className": "WorkOrderStatus",
+        "fields": "id, strName, intControlID",
+        "filters": [{
+          "ql": "intControlID = ?", "parameters": [101]
+        }],
         "callback": function(ret) {
+          if (!ret.error) {
+            resolve(ret.objects.map((ea) => ea.id));
+          } else {
+            reject(ret.error);
+          }
+        }
+      });
+    });
+  }
+
+  function workOrdersWithStatusIDs(statusIDs) {
+    return new Promise((resolve, reject) => {
+      return client.find({
+        "className": "WorkOrder",
+        "fields": "id, intWorkOrderStatusID, strAssets, intSiteId, dtmDateCreated, strAssetIds, strDescription, strCode, intMaintenanceTypeId, dv_intPriorityID, dv_intSiteID, dv_intMaintenanceTypeID",
+        "filters": [{
+          "ql": `intWorkOrderStatusID IN (${statusIDs.map(() => "?").join(",")})`, "parameters": statusIDs
+        }],
+        "callback": function (ret) {
           if (!ret.error) {
             resolve(ret.objects);
           } else {
             reject(ret.error);
           }
         }
-      })
+      });
     });
   }
 
+  function workOrdersPlusTasks(workOrders) {
+    const workOrderIDs = workOrders.map((ea) => ea.id);
+    return new Promise((resolve, reject) => {
+      return client.find({
+        "className": "WorkOrderTask",
+        "fields": "id, intWorkOrderID, intTaskType, strResult, intOrder, strDescription",
+        "filters": [{
+          "ql": `intWorkOrderID IN (${workOrderIDs.map(() => "?").join(",")})`, "parameters": workOrderIDs
+        }],
+        "callback": function (ret) {
+          if (!ret.error) {
+            const tasks = ret.objects;
+            resolve(workOrders.map((wo) => Object.assign({}, wo, {
+              tasks: tasks.filter((task) => task.intWorkOrderID === wo.id)
+            })));
+          } else {
+            reject(ret.error);
+          }
+        }
+      });
+    });
+  }
+
+  function listOpenWorkOrders() {
+    return openWorkOrderStatusIDs()
+      .then((openStatusIDs) => workOrdersWithStatusIDs(openStatusIDs))
+      .then((workOrders) => workOrdersPlusTasks(workOrders));
+  }
 };
