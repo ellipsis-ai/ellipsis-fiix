@@ -12,8 +12,12 @@ module.exports = ellipsis => {
   return {
     create: createWorkOrder,
     maintenanceTypeIdFor: maintenanceTypeIdFor,
-    findWorkOrder: findWorkOrder,
-    listOpenWorkOrders: listOpenWorkOrders
+    find: getWorkOrder,
+    getOpen: getOpenWorkOrders,
+    completedWorkOrderStatusID: completedWorkOrderStatusID,
+    getTasksFor: getWorkOrderTasksFor,
+    completeTask: completeWorkOrderTask,
+    complete: completeWorkOrderID
   };
 
   function reporterDetail(detail, fallback) {
@@ -53,18 +57,40 @@ module.exports = ellipsis => {
     });
   }
 
-  function openStatusId() {
+  function openWorkOrderStatusIDs() {
     return new Promise((resolve, reject) => {
-      client.find({
+      return client.find({
         "className": "WorkOrderStatus",
-        "fields": "id",
-        "filters": [{ "ql": "strName = ?", "parameters": ["Open"] }],
-        "maxObjects": 1,
-        "callback": function(ret) {
+        "fields": "id, strName, intControlID",
+        "filters": [{
+          "ql": "intControlID = ?", "parameters": [101]
+        }],
+        "callback": function (ret) {
           if (!ret.error) {
-            const found = ret.objects[0];
-            resolve(found ? found.id : undefined);
-          } else reject(ret.error);
+            resolve(ret.objects.map((ea) => ea.id));
+          } else {
+            reject(ret.error);
+          }
+        }
+      });
+    });
+  }
+
+  function completedWorkOrderStatusID() {
+    return new Promise((resolve, reject) => {
+      return client.find({
+        "className": "WorkOrderStatus",
+        "fields": "id, strName, intControlID, intSysCode",
+        "filters": [{
+          "ql": "intSysCode = ?", "parameters": [7]
+        }],
+        "callback": function (ret) {
+          const id = ret.objects[0] ? ret.objects[0].id : null;
+          if (!ret.error && id) {
+            resolve(id);
+          } else {
+            reject(ret.error || "No completed status ID found");
+          }
         }
       });
     });
@@ -178,42 +204,6 @@ module.exports = ellipsis => {
     });
   }
 
-  function findWorkOrder(workOrderId) {
-    return new Promise((resolve, reject) => {
-      client.find({
-        className: "WorkOrder",
-        fields: "id, strDescription, strNameUserGuest, strEmailUserGuest, strPhoneUserGuest, intRequestedByUserID",
-        "filters": [{ "ql": "id = ?", "parameters": [workOrderId] }],
-        "callback": function(ret) {
-          if (!ret.error) {
-            resolve(ret.objects);
-          } else {
-            reject(ret.error);
-          }
-        }
-      });
-    });
-  }
-
-  function openWorkOrderStatusIDs() {
-    return new Promise((resolve, reject) => {
-      return client.find({
-        "className": "WorkOrderStatus",
-        "fields": "id, strName, intControlID",
-        "filters": [{
-          "ql": "intControlID = ?", "parameters": [101]
-        }],
-        "callback": function(ret) {
-          if (!ret.error) {
-            resolve(ret.objects.map((ea) => ea.id));
-          } else {
-            reject(ret.error);
-          }
-        }
-      });
-    });
-  }
-
   function workOrdersWithStatusIDs(statusIDs) {
     return new Promise((resolve, reject) => {
       return client.find({
@@ -256,9 +246,104 @@ module.exports = ellipsis => {
     });
   }
 
-  function listOpenWorkOrders() {
+  function getOpenWorkOrders() {
     return openWorkOrderStatusIDs()
       .then((openStatusIDs) => workOrdersWithStatusIDs(openStatusIDs))
       .then((workOrders) => workOrdersPlusTasks(workOrders));
   }
+
+  function getWorkOrder(id) {
+    return new Promise((resolve, reject) => {
+      return client.find({
+        "className": "WorkOrder",
+        "fields": "id, intWorkOrderStatusID, intCompletedByUserID, dtmDateCompleted, strAssets, intSiteId, dtmDateCreated, strAssetIds, strDescription, strCode, intMaintenanceTypeId, dv_intPriorityID, dv_intSiteID, dv_intMaintenanceTypeID",
+        "filters": [{
+          "ql": `id = ?`, "parameters": [id]
+        }],
+        "callback": function (ret) {
+          if (!ret.error) {
+            resolve(ret.objects[0]);
+          } else {
+            reject(ret.error);
+          }
+        }
+      });
+    });
+  }
+
+  function getWorkOrderTasksFor(workOrderId) {
+    return new Promise((resolve, reject) => {
+      return client.find({
+        "className": "WorkOrderTask",
+        "fields": "id, intWorkOrderID, intTaskType, strResult, intOrder, strDescription",
+        "filters": [{
+          "ql": `intWorkOrderID = ?`, "parameters": [workOrderId]
+        }],
+        "callback": function (ret) {
+          if (!ret.error) {
+            resolve(ret.objects);
+          } else {
+            reject(ret.error);
+          }
+        }
+      });
+    });
+  }
+
+  function completeWorkOrderTask(workOrderTaskId, userId, hoursSpent) {
+    return new Promise((resolve, reject) => {
+      const changeFields = ["dtmDateCompleted", "intCompletedByUserID", "dblTimeSpentHours"];
+      const changeObject = {
+        id: workOrderTaskId,
+        dtmDateCompleted: Date.now(),
+        dblTimeSpentHours: hoursSpent
+      };
+      if (userId) {
+        changeFields.push("intCompletedByUserID");
+        changeObject.intCompletedByUserID = userId;
+      }
+      return client.change({
+        className: "WorkOrderTask",
+        changeFields: changeFields.join(", "),
+        object: changeObject,
+        fields: "id, intWorkOrderID, dtmDateCompleted, intCompletedByUserID, dblTimeSpentHours",
+        callback: function (ret) {
+          if (!ret.error) {
+            resolve(ret.object);
+          } else {
+            reject(ret.error);
+          }
+        }
+      });
+    });
+  }
+
+  function completeWorkOrderID(workOrderId, newStatusId, userId) {
+    return new Promise((resolve, reject) => {
+      const changeFields = ["intWorkOrderStatusID", "dtmDateCompleted"];
+      const changeObject = {
+        "id": workOrderId,
+        "intWorkOrderStatusID": newStatusId,
+        "dtmDateCompleted": Date.now()
+      };
+      if (userId) {
+        changeFields.push("intCompletedByUserID");
+        changeObject.intCompletedByUserID = userId;
+      }
+      return client.change({
+        "className": "WorkOrder",
+        "changeFields": changeFields.join(", "),
+        "object": changeObject,
+        "fields": "id, intWorkOrderStatusID, intCompletedByUserID, dtmDateCompleted, strAssets, intSiteId, dtmDateCreated, strAssetIds, strDescription, strCode, intMaintenanceTypeId, dv_intPriorityID, dv_intSiteID, dv_intMaintenanceTypeID",
+        "callback": function (ret) {
+          if (!ret.error) {
+            resolve(ret.object);
+          } else {
+            reject(ret.error);
+          }
+        }
+      });
+    });
+  }
+
 };
