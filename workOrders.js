@@ -326,12 +326,15 @@ module.exports = (ellipsis) => {
       if (userId) {
         changeFields.push("intCompletedByUserID");
         changeObject.intCompletedByUserID = userId;
+      } else {
+        changeFields.push("strCompletionNotes");
+        changeObject.strCompletionNotes = generateCompletionNotes();
       }
       return client.change({
         "className": "WorkOrder",
         "changeFields": changeFields.join(", "),
         "object": changeObject,
-        "fields": "id, intWorkOrderStatusID, intCompletedByUserID, dtmDateCompleted, strAssets, intSiteId, dtmDateCreated, strAssetIds, strDescription, strCode, intMaintenanceTypeId, dv_intPriorityID, dv_intSiteID, dv_intMaintenanceTypeID",
+        "fields": "id, intWorkOrderStatusID, intCompletedByUserID, dtmDateCompleted, strAssets, intSiteId, dtmDateCreated, strAssetIds, strDescription, strCode, strCompletionNotes, intMaintenanceTypeId, dv_intPriorityID, dv_intSiteID, dv_intMaintenanceTypeID",
         "callback": function (ret) {
           if (!ret.error) {
             resolve(ret.object);
@@ -341,6 +344,12 @@ module.exports = (ellipsis) => {
         }
       });
     });
+  }
+
+  function generateCompletionNotes() {
+    const fullName = ellipsis.event.user.fullName || "unknown user";
+    const emailAddress = ellipsis.event.user.email ? `<${ellipsis.event.user.email}>` : "(unknown email)";
+    return `Marked complete by ${fullName} ${emailAddress}`;
   }
 
 };
