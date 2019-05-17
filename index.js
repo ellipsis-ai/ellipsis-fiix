@@ -1,5 +1,3 @@
-"use strict";
-
 const Integration = {
   files: require('./files'),
   locations: require('./locations'),

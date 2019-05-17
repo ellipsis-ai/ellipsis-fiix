@@ -1,8 +1,6 @@
-"use strict";
-
-module.exports = ellipsis => {
+module.exports = (ellipsis) => {
   const client = require('./sdk')(ellipsis);
-  const guestUserId = parseInt(ellipsis.env.FIIX_GUEST_USER_ID);
+  const guestUserId = Number.parseInt(ellipsis.env.FIIX_GUEST_USER_ID, 10);
 
   const slackProfile = ellipsis.userInfo.messageInfo.details.profile;
   const reporterName = reporterDetail("realName", "Anonymous guest");
@@ -14,8 +12,8 @@ module.exports = ellipsis => {
     maintenanceTypeIdFor: maintenanceTypeIdFor,
     find: getWorkOrder,
     getOpen: getOpenWorkOrders,
-    completedWorkOrderStatusID: completedWorkOrderStatusID,
-    getTasksFor: getWorkOrderTasksFor,
+    getCompletedStatusId: getCompletedStatusId,
+    getTasksFor: getTasksFor,
     completeTask: completeWorkOrderTask,
     complete: completeWorkOrderID
   };
@@ -57,7 +55,7 @@ module.exports = ellipsis => {
     });
   }
 
-  function openWorkOrderStatusIDs() {
+  function getOpenStatusIds() {
     return new Promise((resolve, reject) => {
       return client.find({
         "className": "WorkOrderStatus",
@@ -76,7 +74,7 @@ module.exports = ellipsis => {
     });
   }
 
-  function completedWorkOrderStatusID() {
+  function getCompletedStatusId() {
     return new Promise((resolve, reject) => {
       return client.find({
         "className": "WorkOrderStatus",
@@ -96,7 +94,7 @@ module.exports = ellipsis => {
     });
   }
 
-  function requestedStatusId() {
+  function getRequestedStatusId() {
     return new Promise((resolve, reject) => {
       client.find({
         "className": "WorkOrderStatus",
@@ -156,7 +154,7 @@ module.exports = ellipsis => {
   function createBareWorkOrder(options) {
     return new Promise((resolve, reject) => {
       maintenanceTypeIdFor(options.maintenanceTypeName).then(maintenanceTypeId => {
-        requestedStatusId().then(requestedStatusId => {
+        getRequestedStatusId().then(requestedStatusId => {
           priorityIdFor(options.priority || "Low").then(lowPriorityId => {
             const locationId = options.location ? parseInt(options.location.siteId) : undefined;
             client.add({
@@ -204,13 +202,38 @@ module.exports = ellipsis => {
     });
   }
 
-  function workOrdersWithStatusIDs(statusIDs) {
+  function workOrdersWithStatusIds(statusIds) {
+    if (statusIds.length === 0) {
+      return Promise.resolve([]);
+    }
     return new Promise((resolve, reject) => {
       return client.find({
         "className": "WorkOrder",
         "fields": "id, intWorkOrderStatusID, strAssets, intSiteId, dtmDateCreated, strAssetIds, strDescription, strCode, intMaintenanceTypeId, dv_intPriorityID, dv_intSiteID, dv_intMaintenanceTypeID",
         "filters": [{
-          "ql": `intWorkOrderStatusID IN (${statusIDs.map(() => "?").join(",")})`, "parameters": statusIDs
+          "ql": `intWorkOrderStatusID IN (${statusIds.map(() => "?").join(",")})`, "parameters": statusIds
+        }],
+        "callback": function (ret) {
+          if (!ret.error) {
+            resolve(ret.objects);
+          } else {
+            reject(ret.error);
+          }
+        }
+      });
+    });
+  }
+
+  function getAllTasksFor(workOrderIds) {
+    if (workOrderIds.length === 0) {
+      return Promise.resolve([]);
+    }
+    return new Promise((resolve, reject) => {
+      return client.find({
+        "className": "WorkOrderTask",
+        "fields": "id, intWorkOrderID, intTaskType, strResult, intOrder, strDescription",
+        "filters": [{
+          "ql": `intWorkOrderID IN (${workOrderIds.map(() => "?").join(",")})`, "parameters": workOrderIds
         }],
         "callback": function (ret) {
           if (!ret.error) {
@@ -224,31 +247,20 @@ module.exports = ellipsis => {
   }
 
   function workOrdersPlusTasks(workOrders) {
+    if (workOrders.length === 0) {
+      return Promise.resolve([]);
+    }
     const workOrderIDs = workOrders.map((ea) => ea.id);
-    return new Promise((resolve, reject) => {
-      return client.find({
-        "className": "WorkOrderTask",
-        "fields": "id, intWorkOrderID, intTaskType, strResult, intOrder, strDescription",
-        "filters": [{
-          "ql": `intWorkOrderID IN (${workOrderIDs.map(() => "?").join(",")})`, "parameters": workOrderIDs
-        }],
-        "callback": function (ret) {
-          if (!ret.error) {
-            const tasks = ret.objects;
-            resolve(workOrders.map((wo) => Object.assign({}, wo, {
-              tasks: tasks.filter((task) => task.intWorkOrderID === wo.id)
-            })));
-          } else {
-            reject(ret.error);
-          }
-        }
-      });
+    return getAllTasksFor(workOrderIDs).then((tasks) => {
+      return Promise.resolve(workOrders.map((wo) => Object.assign({}, wo, {
+        tasks: tasks.filter((task) => task.intWorkOrderID === wo.id)
+      })));
     });
   }
 
   function getOpenWorkOrders() {
-    return openWorkOrderStatusIDs()
-      .then((openStatusIDs) => workOrdersWithStatusIDs(openStatusIDs))
+    return getOpenStatusIds()
+      .then((statusIds) => workOrdersWithStatusIds(statusIds))
       .then((workOrders) => workOrdersPlusTasks(workOrders));
   }
 
@@ -271,23 +283,8 @@ module.exports = ellipsis => {
     });
   }
 
-  function getWorkOrderTasksFor(workOrderId) {
-    return new Promise((resolve, reject) => {
-      return client.find({
-        "className": "WorkOrderTask",
-        "fields": "id, intWorkOrderID, intTaskType, strResult, intOrder, strDescription",
-        "filters": [{
-          "ql": `intWorkOrderID = ?`, "parameters": [workOrderId]
-        }],
-        "callback": function (ret) {
-          if (!ret.error) {
-            resolve(ret.objects);
-          } else {
-            reject(ret.error);
-          }
-        }
-      });
-    });
+  function getTasksFor(workOrderId) {
+    return getAllTasksFor([workOrderId]);
   }
 
   function completeWorkOrderTask(workOrderTaskId, userId, hoursSpent) {
