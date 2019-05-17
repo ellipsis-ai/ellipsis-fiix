@@ -289,7 +289,7 @@ module.exports = (ellipsis) => {
 
   function completeWorkOrderTask(workOrderTaskId, userId, hoursSpent) {
     return new Promise((resolve, reject) => {
-      const changeFields = ["dtmDateCompleted", "intCompletedByUserID", "dblTimeSpentHours"];
+      const changeFields = ["dtmDateCompleted", "dblTimeSpentHours"];
       const changeObject = {
         id: workOrderTaskId,
         dtmDateCompleted: Date.now(),
@@ -298,12 +298,15 @@ module.exports = (ellipsis) => {
       if (userId) {
         changeFields.push("intCompletedByUserID");
         changeObject.intCompletedByUserID = userId;
+      } else {
+        changeFields.push("strTaskNotesCompletion");
+        changeObject.strTaskNotesCompletion = generateCompletionNotes();
       }
       return client.change({
         className: "WorkOrderTask",
         changeFields: changeFields.join(", "),
         object: changeObject,
-        fields: "id, intWorkOrderID, dtmDateCompleted, intCompletedByUserID, dblTimeSpentHours",
+        fields: "id, intWorkOrderID, dtmDateCompleted, intCompletedByUserID, dblTimeSpentHours, strTaskNotesCompletion",
         callback: function (ret) {
           if (!ret.error) {
             resolve(ret.object);
