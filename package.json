@@ -1,6 +1,6 @@
 {
   "name": "ellipsis-fiix",
-  "version": "0.1.0-beta.3",
+  "version": "0.1.0-beta.4",
   "description": "Support for accessing the Fiix API from Ellipsis.",
   "main": "index.js",
   "scripts": {
