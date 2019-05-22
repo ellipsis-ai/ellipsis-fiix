@@ -209,7 +209,7 @@ module.exports = (ellipsis) => {
     return new Promise((resolve, reject) => {
       return client.find({
         "className": "WorkOrder",
-        "fields": this.getWorkOrderFields().join(", "),
+        "fields": getWorkOrderFields().join(", "),
         "filters": [{
           "ql": `intWorkOrderStatusID IN (${statusIds.map(() => "?").join(",")})`, "parameters": statusIds
         }],
@@ -289,7 +289,7 @@ module.exports = (ellipsis) => {
     return new Promise((resolve, reject) => {
       return client.find({
         "className": "WorkOrder",
-        "fields": this.getWorkOrderFields().join(", "),
+        "fields": getWorkOrderFields().join(", "),
         "filters": [{
           "ql": `id = ?`, "parameters": [id]
         }],
@@ -358,7 +358,7 @@ module.exports = (ellipsis) => {
         "className": "WorkOrder",
         "changeFields": changeFields.join(", "),
         "object": changeObject,
-        "fields": this.getWorkOrderFields().join(", "),
+        "fields": getWorkOrderFields().join(", "),
         "callback": function (ret) {
           if (!ret.error) {
             resolve(ret.object);
