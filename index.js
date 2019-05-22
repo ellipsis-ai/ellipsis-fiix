@@ -1,4 +1,5 @@
 const Integration = {
+  assets: require('./assets'),
   files: require('./files'),
   locations: require('./locations'),
   sdk: require('./sdk'),
