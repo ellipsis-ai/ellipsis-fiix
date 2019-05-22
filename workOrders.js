@@ -209,7 +209,7 @@ module.exports = (ellipsis) => {
     return new Promise((resolve, reject) => {
       return client.find({
         "className": "WorkOrder",
-        "fields": "id, intWorkOrderStatusID, strAssets, intSiteId, dtmDateCreated, strAssetIds, strDescription, strCode, intMaintenanceTypeId, dv_intPriorityID, dv_intSiteID, dv_intMaintenanceTypeID",
+        "fields": getWorkOrderFields().join(", "),
         "filters": [{
           "ql": `intWorkOrderStatusID IN (${statusIds.map(() => "?").join(",")})`, "parameters": statusIds
         }],
@@ -264,11 +264,32 @@ module.exports = (ellipsis) => {
       .then((workOrders) => workOrdersPlusTasks(workOrders));
   }
 
+  function getWorkOrderFields() {
+    return [
+      "dtmDateCompleted",
+      "dtmDateCreated",
+      "dv_intMaintenanceTypeID",
+      "dv_intPriorityID",
+      "dv_intSiteID",
+      "id",
+      "intCompletedByUserID",
+      "intMaintenanceTypeId",
+      "intSiteId",
+      "intWorkOrderStatusID",
+      "strAssetIds",
+      "strAssets",
+      "strAssignedUsers",
+      "strCode",
+      "strCompletionNotes",
+      "strDescription"
+    ];
+  }
+
   function getWorkOrder(id) {
     return new Promise((resolve, reject) => {
       return client.find({
         "className": "WorkOrder",
-        "fields": "id, intWorkOrderStatusID, intCompletedByUserID, dtmDateCompleted, strAssets, intSiteId, dtmDateCreated, strAssetIds, strDescription, strCode, intMaintenanceTypeId, dv_intPriorityID, dv_intSiteID, dv_intMaintenanceTypeID",
+        "fields": getWorkOrderFields().join(", "),
         "filters": [{
           "ql": `id = ?`, "parameters": [id]
         }],
@@ -337,7 +358,7 @@ module.exports = (ellipsis) => {
         "className": "WorkOrder",
         "changeFields": changeFields.join(", "),
         "object": changeObject,
-        "fields": "id, intWorkOrderStatusID, intCompletedByUserID, dtmDateCompleted, strAssets, intSiteId, dtmDateCreated, strAssetIds, strDescription, strCode, strCompletionNotes, intMaintenanceTypeId, dv_intPriorityID, dv_intSiteID, dv_intMaintenanceTypeID",
+        "fields": getWorkOrderFields().join(", "),
         "callback": function (ret) {
           if (!ret.error) {
             resolve(ret.object);
