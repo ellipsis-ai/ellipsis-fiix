@@ -24,7 +24,27 @@ module.exports = (ellipsis) => {
     });
   }
 
+  function getAllActive() {
+    return new Promise((resolve, reject) => {
+      return client.find({
+        "className": "User",
+        "fields": "id, strFullName, strEmailAddress",
+        "filters": [{
+          "ql": "intUserStatusID = ?", "parameters": [1]
+        }],
+        callback: function (ret) {
+          if (!ret.error) {
+            resolve(ret.objects);
+          } else {
+            reject(ret.error);
+          }
+        }
+      });
+    });
+  }
+
   return {
-    userIdForEmail: getUserIdForEmail
+    userIdForEmail: getUserIdForEmail,
+    getAllActive: getAllActive
   };
 };
