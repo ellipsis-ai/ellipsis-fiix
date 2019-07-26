@@ -320,7 +320,7 @@ module.exports = (ellipsis) => {
         changeFields.push("intCompletedByUserID");
       }
       if (optionalNotes || !userId) {
-        changeFields.push["strTaskNotesCompletion"];
+        changeFields.push("strTaskNotesCompletion");
       }
       if (userId) {
         changeObject.intCompletedByUserID = userId;
