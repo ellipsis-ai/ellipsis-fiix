@@ -308,7 +308,7 @@ module.exports = (ellipsis) => {
     return getAllTasksFor([workOrderId]);
   }
 
-  function completeWorkOrderTask(workOrderTaskId, userId, hoursSpent) {
+  function completeWorkOrderTask(workOrderTaskId, userId, hoursSpent, optionalNotes) {
     return new Promise((resolve, reject) => {
       const changeFields = ["dtmDateCompleted", "dblTimeSpentHours"];
       const changeObject = {
@@ -318,10 +318,17 @@ module.exports = (ellipsis) => {
       };
       if (userId) {
         changeFields.push("intCompletedByUserID");
+      }
+      if (optionalNotes || !userId) {
+        changeFields.push["strTaskNotesCompletion"];
+      }
+      if (userId) {
         changeObject.intCompletedByUserID = userId;
+        if (optionalNotes) {
+          changeObject.strTaskNotesCompletion = optionalNotes;
+        }
       } else {
-        changeFields.push("strTaskNotesCompletion");
-        changeObject.strTaskNotesCompletion = generateCompletionNotes();
+        changeObject.strTaskNotesCompletion = generateCompletionNotes(optionalNotes);
       }
       return client.change({
         className: "WorkOrderTask",
@@ -339,7 +346,7 @@ module.exports = (ellipsis) => {
     });
   }
 
-  function completeWorkOrderID(workOrderId, newStatusId, userId) {
+  function completeWorkOrderID(workOrderId, newStatusId, userId, optionalNotes) {
     return new Promise((resolve, reject) => {
       const changeFields = ["intWorkOrderStatusID", "dtmDateCompleted"];
       const changeObject = {
@@ -349,10 +356,17 @@ module.exports = (ellipsis) => {
       };
       if (userId) {
         changeFields.push("intCompletedByUserID");
-        changeObject.intCompletedByUserID = userId;
-      } else {
+      }
+      if (optionalNotes || !userId) {
         changeFields.push("strCompletionNotes");
-        changeObject.strCompletionNotes = generateCompletionNotes();
+      }
+      if (userId) {
+        changeObject.intCompletedByUserID = userId;
+        if (optionalNotes) {
+          changeObject.strCompletionNotes = optionalNotes;
+        }
+      } else {
+        changeObject.strCompletionNotes = generateCompletionNotes(optionalNotes);
       }
       return client.change({
         "className": "WorkOrder",
@@ -370,10 +384,10 @@ module.exports = (ellipsis) => {
     });
   }
 
-  function generateCompletionNotes() {
+  function generateCompletionNotes(optionalNotes) {
     const fullName = ellipsis.event.user.fullName || "unknown user";
     const emailAddress = ellipsis.event.user.email ? `<${ellipsis.event.user.email}>` : "(unknown email)";
-    return `Marked complete by ${fullName} ${emailAddress}`;
+    return `${optionalNotes ? optionalNotes + "\n" : ""}(Marked complete by ${fullName} ${emailAddress})`;
   }
 
 };
